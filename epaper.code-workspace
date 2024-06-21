@@ -2,15 +2,6 @@
     "folders": [
         {
             "path": "./RaspberryPi_JetsonNano/python"
-        },
-        {
-            "path": "./.gitignore"
-        },
-        {
-            "path": "./README.md"
-        },
-        {
-            "path": "./Special Reminder.txt"
         }
     ],
     "extensions": {
