@@ -109,45 +109,7 @@ def five(epd, runtime=20):
         if(num == runtime):
             break
 
-
-def get_network_interfaces(epd, font: ImageFont.FreeTypeFont, fill = 0):
-    """A clone of 'ifconfig' on UNIX.
-
-    $ python3 scripts/ifconfig.py
-    lo:
-        stats          : speed=0MB, duplex=?, mtu=65536, up=yes
-        incoming       : bytes=1.95M, pkts=22158, errs=0, drops=0
-        outgoing       : bytes=1.95M, pkts=22158, errs=0, drops=0
-        IPv4 address   : 127.0.0.1
-            netmask   : 255.0.0.0
-        IPv6 address   : ::1
-            netmask   : ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-        MAC  address   : 00:00:00:00:00:00
-
-    docker0:
-        stats          : speed=0MB, duplex=?, mtu=1500, up=yes
-        incoming       : bytes=3.48M, pkts=65470, errs=0, drops=0
-        outgoing       : bytes=164.06M, pkts=112993, errs=0, drops=0
-        IPv4 address   : 172.17.0.1
-            broadcast : 172.17.0.1
-            netmask   : 255.255.0.0
-        IPv6 address   : fe80::42:27ff:fe5e:799e%docker0
-            netmask   : ffff:ffff:ffff:ffff::
-        MAC  address   : 02:42:27:5e:79:9e
-            broadcast : ff:ff:ff:ff:ff:ff
-
-    wlp3s0:
-        stats          : speed=0MB, duplex=?, mtu=1500, up=yes
-        incoming       : bytes=7.04G, pkts=5637208, errs=0, drops=0
-        outgoing       : bytes=372.01M, pkts=3200026, errs=0, drops=0
-        IPv4 address   : 10.0.0.2
-            broadcast : 10.255.255.255
-            netmask   : 255.0.0.0
-        IPv6 address   : fe80::ecb3:1584:5d17:937%wlp3s0
-            netmask   : ffff:ffff:ffff:ffff::
-        MAC  address   : 48:45:20:59:a4:0c
-            broadcast : ff:ff:ff:ff:ff:ff
-    """
+class PiStats:
     af_map = {
         socket.AF_INET: 'IPv4',
         socket.AF_INET6: 'IPv6',
@@ -158,80 +120,200 @@ def get_network_interfaces(epd, font: ImageFont.FreeTypeFont, fill = 0):
         psutil.NIC_DUPLEX_HALF: "half",
         psutil.NIC_DUPLEX_UNKNOWN: "?",
     }
-    stats = psutil.net_if_stats()
-    io_counters = psutil.net_io_counters(pernic=True)
-    logging.info("5.show network info, horizontal, just 1 Gary mode")
+    up_map = {
+        True: u'✓',
+        False: u'✕'
+    }
+    def __init__(self):
+        self.network_ifaces: dict[str, list[psutil.snicaddr]] = psutil.net_if_addrs().items()
+        self.network_stats: dict[str, psutil.snicstats] = psutil.net_if_stats()
     
-    Himage = Image.new('L', horizontal(epd), 0xFF)  #? 0xFF: clear the frame
-    draw = ImageDraw.Draw(Himage)
-    x = 10
-    y = 0
-    y_increment = font.size
-    for nic, addrs in psutil.net_if_addrs().items():
-        if "docker" in nic or nic == "lo":
-            continue
-
-        is_up = stats[nic].isup if nic in stats else False
-        # print(c)
-        # if nic in stats:
-            # st = stats[nic]
-        #     print("    stats          : ", end='')
-        #     print(
-        #         "speed=%sMB, duplex=%s, mtu=%s, up=%s"
-        #         % (
-        #             st.speed,
-        #             duplex_map[st.duplex],
-        #             st.mtu,
-        #             "yes" if st.isup else "no",
-        #         )
-        #     )
-        # if nic in io_counters:
-        #     io = io_counters[nic]
-        #     print("    incoming       : ", end='')
-        #     print(
-        #         "bytes=%s, pkts=%s, errs=%s, drops=%s"
-        #         % (
-        #             bytes2human(io.bytes_recv),
-        #             io.packets_recv,
-        #             io.errin,
-        #             io.dropin,
-        #         )
-        #     )
-        #     print("    outgoing       : ", end='')
-        #     print(
-        #         "bytes=%s, pkts=%s, errs=%s, drops=%s"
-        #         % (
-        #             bytes2human(io.bytes_sent),
-        #             io.packets_sent,
-        #             io.errout,
-        #             io.dropout,
-        #         )
-        #     )
-        c = format("(%s) %-1s:" % (u'✓' if is_up else u'✕', nic))
-        logging.debug(c)
-        draw.text((x, y), text=c, font=font)
-        y += y_increment
-        for addr in addrs:
-            if addr.family == socket.AF_INET6: #? just get ipv4 and MAC
+    def filter_stats(self, 
+                     include_broadcast:bool = False, include_netmask: bool = False,
+                     include_ptp: bool = False, include_io_count: bool = False):
+        """
+        A clone of 'ifconfig' on UNIX.
+        ```
+            $ python3 scripts/ifconfig.py
+            lo:
+                stats          : speed=0MB, duplex=?, mtu=65536, up=yes
+                incoming       : bytes=1.95M, pkts=22158, errs=0, drops=0
+                outgoing       : bytes=1.95M, pkts=22158, errs=0, drops=0
+                IPv4 address   : 127.0.0.1
+                     netmask   : 255.0.0.0
+                IPv6 address   : ::1
+                     netmask   : ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+                MAC  address   : 00:00:00:00:00:00
+        ```
+        Args:
+            include_broadcast (bool, optional): include broadcast value. Defaults to False.
+            include_netmask (bool, optional): include netmask value. Defaults to False.
+            include_ptp (bool, optional): include ptp value. Defaults to False.
+            include_io_count (bool, optional): include stats on network packet drop, etc. Defaults to False.
+        """
+        logging.info("Filter network info")
+        stats = self.network_stats
+        io_counters = psutil.net_io_counters(pernic=True) if include_io_count else None
+        for nic, addrs in self.network_ifaces:
+            if "docker" in nic or nic == "lo":
                 continue
-            c = format("      %-4s" % af_map.get(addr.family, addr.family))
-            c += format(" address : %s" % addr.address)
-            draw.text((x, y), text=c, font=font)
-            y += y_increment
+            #? Stats
+            mb_speed = stats[nic].speed if nic in stats else None
+            duplex = self.duplex_map[stats[nic].duplex] if nic in stats else None
+            mtu = stats[nic].mtu if nic in stats else None
+            is_up = self.up_map[stats[nic].isup] if nic in stats else self.up_map[False]
+            #? More stats:
+            c = format("(%s) %s:" % (is_up, nic))
             logging.debug(c)
-            # if addr.broadcast:
-            #     print("         broadcast : %s" % addr.broadcast)
-            # if addr.netmask:
-            #     print("         netmask   : %s" % addr.netmask)
-            # if addr.ptp:
-            #     print("      p2p       : %s" % addr.ptp)
+            for addr in addrs:
+                if addr.family == socket.AF_INET6: #? just get ipv4 and MAC
+                    continue
+                # data = str.format(" {} address: {}", self.af_map.get(addr.family, addr.family), addr.address )
+                data = format("%-6s address: %s" % (self.af_map.get(addr.family, addr.family), addr.address))
+                logging.debug(data)
+                if include_broadcast and addr.broadcast: 
+                    data = format("\tbroadcast: %s" % addr.broadcast)
+                    logging.debug(data)
+                if include_netmask and addr.netmask: 
+                    data = format("\t  netmask: %s" % addr.netmask)
+                    logging.debug(data)
+                if include_ptp and addr.ptp: 
+                    data = format("\t      ptp: %s" % addr.ptp)
+                    logging.debug(data)
+                
+            #? IO stats:
+            if io_counters:
+                #? Incoming
+                incoming_bytes = bytes2human(io_counters[nic].bytes_recv) if nic in io_counters else None
+                incoming_packets = io_counters[nic].packets_recv if nic in io_counters else None
+                incoming_errs = io_counters[nic].errin if nic in io_counters else None
+                incoming_drops = io_counters[nic].dropin if nic in io_counters else None
+                #? Outgoing
+                outgoing_bytes = bytes2human(io_counters[nic].bytes_sent) if nic in io_counters else None 
+                outgoing_packets = io_counters[nic].packets_sent if nic in io_counters else None
+                outgoing_errs = io_counters[nic].errout if nic in io_counters else None
+                outgoing_drops = io_counters[nic].dropout if nic in io_counters else None
+
+# def get_network_interfaces(epd, font: ImageFont.FreeTypeFont, fill = 0):
+#     """A clone of 'ifconfig' on UNIX.
+
+#     $ python3 scripts/ifconfig.py
+#     lo:
+#         stats          : speed=0MB, duplex=?, mtu=65536, up=yes
+#         incoming       : bytes=1.95M, pkts=22158, errs=0, drops=0
+#         outgoing       : bytes=1.95M, pkts=22158, errs=0, drops=0
+#         IPv4 address   : 127.0.0.1
+#             netmask   : 255.0.0.0
+#         IPv6 address   : ::1
+#             netmask   : ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+#         MAC  address   : 00:00:00:00:00:00
+
+#     docker0:
+#         stats          : speed=0MB, duplex=?, mtu=1500, up=yes
+#         incoming       : bytes=3.48M, pkts=65470, errs=0, drops=0
+#         outgoing       : bytes=164.06M, pkts=112993, errs=0, drops=0
+#         IPv4 address   : 172.17.0.1
+#             broadcast : 172.17.0.1
+#             netmask   : 255.255.0.0
+#         IPv6 address   : fe80::42:27ff:fe5e:799e%docker0
+#             netmask   : ffff:ffff:ffff:ffff::
+#         MAC  address   : 02:42:27:5e:79:9e
+#             broadcast : ff:ff:ff:ff:ff:ff
+
+#     wlp3s0:
+#         stats          : speed=0MB, duplex=?, mtu=1500, up=yes
+#         incoming       : bytes=7.04G, pkts=5637208, errs=0, drops=0
+#         outgoing       : bytes=372.01M, pkts=3200026, errs=0, drops=0
+#         IPv4 address   : 10.0.0.2
+#             broadcast : 10.255.255.255
+#             netmask   : 255.0.0.0
+#         IPv6 address   : fe80::ecb3:1584:5d17:937%wlp3s0
+#             netmask   : ffff:ffff:ffff:ffff::
+#         MAC  address   : 48:45:20:59:a4:0c
+#             broadcast : ff:ff:ff:ff:ff:ff
+#     """
+#     af_map = {
+#         socket.AF_INET: 'IPv4',
+#         socket.AF_INET6: 'IPv6',
+#         psutil.AF_LINK: 'MAC',
+#     }
+#     duplex_map = {
+#         psutil.NIC_DUPLEX_FULL: "full",
+#         psutil.NIC_DUPLEX_HALF: "half",
+#         psutil.NIC_DUPLEX_UNKNOWN: "?",
+#     }
+#     stats = psutil.net_if_stats()
+
+    
+    
+#     Himage = Image.new('L', horizontal(epd), 0xFF)  #? 0xFF: clear the frame
+#     draw = ImageDraw.Draw(Himage)
+#     x = 10
+#     y = 0
+#     y_increment = font.size
+#     for nic, addrs in psutil.net_if_addrs().items():
+#         if "docker" in nic or nic == "lo":
+#             continue
+#         mb_speed = stats[nic].speed if nic in stats else None
+#         duplex = duplex_map[stats[nic].duplex] if nic in stats else None
+#         mtu = stats[nic].mtu if nic in stats else None
+#         is_up = stats[nic].isup if nic in stats else False
+        
+#         #? IO stats:
+#         incoming_bytes = if io_counters
+        
+#         # if nic in io_counters:
+#         #     io = io_counters[nic]
+#         #     print("    incoming       : ", end='')
+#         #     print(
+#         #         "bytes=%s, pkts=%s, errs=%s, drops=%s"
+#         #         % (
+#         #             bytes2human(io.bytes_recv),
+#         #             io.packets_recv,
+#         #             io.errin,
+#         #             io.dropin,
+#         #         )
+#         #     )
+#         #     print("    outgoing       : ", end='')
+#         #     print(
+#         #         "bytes=%s, pkts=%s, errs=%s, drops=%s"
+#         #         % (
+#         #             bytes2human(io.bytes_sent),
+#         #             io.packets_sent,
+#         #             io.errout,
+#         #             io.dropout,
+#         #         )
+#         #     )
+#         c = format("(%s) %-1s:" % (u'✓' if is_up else u'✕', nic))
+#         logging.debug(c)
+#         draw.text((x, y), text=c, font=font)
+#         y += y_increment
+#         for addr in addrs:
+#             if addr.family == socket.AF_INET6: #? just get ipv4 and MAC
+#                 continue
+#             c = format("      %-4s" % af_map.get(addr.family, addr.family))
+#             c += format(" address : %s" % addr.address)
+#             draw.text((x, y), text=c, font=font)
+#             y += y_increment
+#             logging.debug(c)
+#             # if addr.broadcast:
+#             #     print("         broadcast : %s" % addr.broadcast)
+#             # if addr.netmask:
+#             #     print("         netmask   : %s" % addr.netmask)
+#             # if addr.ptp:
+#             #     print("      p2p       : %s" % addr.ptp)
             
-        logging.debug("y incremented to: %d", y)   
-    epd.display_4Gray(epd.getbuffer_4Gray(Himage))
-    time.sleep(300)
+#         logging.debug("y incremented to: %d", y)   
+#     epd.display_4Gray(epd.getbuffer_4Gray(Himage))
+#     time.sleep(300)
 
 
 logging.basicConfig(level=logging.DEBUG)
+
+
+
+
+
 
 try:
     logging.info("epd3in7 Demo")
@@ -247,7 +329,9 @@ try:
     # five(epd, 80)
 
 
-    get_network_interfaces(epd, font18)
+    # get_network_interfaces(epd, font18)
+    pi = PiStats()
+    pi.filter_stats(include_broadcast=True, include_netmask=True, include_ptp=True)
     
     logging.info("Clear...")
     epd.init(0)
