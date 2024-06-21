@@ -9,5 +9,10 @@
             "donjayamanne.python-extension-pack",
             "ctcuff.font-preview"
         ]
+    },
+    "settings": {
+        "python.analysis.include": [
+            "lib"
+        ]
     }
 }
