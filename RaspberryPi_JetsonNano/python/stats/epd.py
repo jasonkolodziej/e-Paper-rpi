@@ -167,19 +167,12 @@ class PiStats:
         
     def logo(self):
         logging.info("Read logo file on window")
-        Himage2 = Image.new('1', horizontal(self.epd), 255)  # 255: clear the frame
+        #? Create 1 px bit horizontal, staring with white
+        spot = Image.new('1', horizontal(self.epd), 255)  # 255: clear the frame
         self.resize_logo()
-        Himage2.paste(self.logo_image, (self.epd.width + self.logo_image_width, 0))
-        self.epd.display_4Gray(self.epd.getbuffer_4Gray(Himage2))
+        spot.paste(self.logo_image, (self.epd.width + self.logo_image_width, 0))
+        self.epd.display_4Gray(self.epd.getbuffer_4Gray(spot))
         time.sleep(50)
-    
-    def write_text(self, text:str = ''): 
-        Himage = Image.new('L', horizontal(epd), 0xFF)  #? 0xFF: clear the frame
-        draw = ImageDraw.Draw(Himage)
-        draw.text((10, 0), text='', font = self.font48, fill = 0)
-        draw.text((10, 50), '', font = font24, fill = 0)
-        epd.display_4Gray(epd.getbuffer_4Gray(Himage))
-        time.sleep(300)
         
     def network(self, 
                      include_broadcast:bool = False, include_netmask: bool = False,
@@ -332,13 +325,13 @@ class PiStats:
         self.epd_init(GRAYS.GRAY1)         # 1 Gary mode
         # epd.Clear(0xFF, 1)
         #? Create 1 px bit horizontal, staring with white
-        time_image = Image.new('1', horizontal(epd), 255)
+        time_image = Image.new('1', horizontal(self.epd), 255)
         time_draw = ImageDraw.Draw(time_image)
         num = 0
         while (True):
             time_draw.rectangle((10, 10, 120, 50), fill = 255)
             time_draw.text((10, 10), time.strftime('%H:%M:%S'), font = PiStats.Font(24), fill= GRAYS.GRAY4)
-            epd.display_1Gray(epd.getbuffer(time_image))
+            self.epd.display_1Gray(self.epd.getbuffer(time_image))
             num = num + 1
             if(num == 20):
                 break
@@ -350,6 +343,10 @@ class PiStats:
     def sleep(self):
         logging.info("Goto Sleep...")
         self.epd.sleep()
+    
+    def clear(self):
+        logging.info("clearing...")
+        self.epd_init(0, 0xFF)
     
     def __exit__(self, cleanup:bool = True):
         self.epd.Clear(0xFF, 0)
