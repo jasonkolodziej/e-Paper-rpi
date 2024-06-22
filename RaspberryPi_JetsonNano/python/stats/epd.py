@@ -111,13 +111,11 @@ def five(epd, runtime=20):
             break
 
 class PiStats:
-    font48 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 48)
-    font36 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 36)
-    font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
-    font18 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 18)
-    font16 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 16)
-    font14 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 14)
-    font12 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 12)
+    __font_name__ = 'Ubuntu-Regular.ttf'
+    
+    def Font(self, size:int = 36):
+      return ImageFont.truetype(os.path.join(fontdir, PiStats.__font_name__), size=size)  
+    
     af_map = {
         socket.AF_INET: 'IPv4',
         socket.AF_INET6: 'IPv6',
@@ -132,6 +130,7 @@ class PiStats:
         True: u'✓',
         False: u'✕'
     }
+    
     def __init__(self, epd):
         self.epd = epd
         self.epd_init()
@@ -175,7 +174,7 @@ class PiStats:
         epd.display_4Gray(epd.getbuffer_4Gray(Himage))
         time.sleep(300)
         
-    def filter_stats(self, 
+    def network(self, 
                      include_broadcast:bool = False, include_netmask: bool = False,
                      include_ptp: bool = False, include_io_count: bool = False):
         """
@@ -207,7 +206,7 @@ class PiStats:
         io_counters = psutil.net_io_counters(pernic=True) if include_io_count else None
         for nic, addrs in self.network_ifaces:
             x = 0
-            font = self.font18
+            font = self.Font(18)
             if "docker" in nic or nic == "lo":
                 continue
             #? Stats
@@ -222,7 +221,7 @@ class PiStats:
             y += font.size
             for addr in addrs:
                 x = 30
-                font = self.font16
+                font = self.Font(16)
                 if addr.family == socket.AF_INET6: #? just get ipv4 and MAC
                     continue
                 # data = str.format(" {} address: {}", self.af_map.get(addr.family, addr.family), addr.address )
@@ -336,17 +335,18 @@ try:
     epd.init(0)
     epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
     
-    font36 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 36)
-    font24 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 24)
-    font18 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 18)
+    font36 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttc'), 36)
+    font24 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttc'), 24)
+    font18 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttc'), 18)
     # four(epd)
     # five(epd, 80)
 
 
     # get_network_interfaces(epd, font18)
     pi = PiStats(epd)
-    pi.memory_usage()
-    pi.cpu_usage()
+    pi.network()
+    # pi.memory_usage()
+    # pi.cpu_usage()
     # pi.logo()
     # pi.filter_stats()
     # three(epd)
