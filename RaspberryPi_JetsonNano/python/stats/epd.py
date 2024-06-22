@@ -13,11 +13,11 @@ import logging
 from typing import Callable
 from waveshare_epd import epd3in7, epdconfig
 # from datetime import timedelta, datetime, time
-from PIL import Image, ImageDraw, ImageFont, ImageOps
 import traceback
 #? Jason's imports
 import psutil
 from psutil._common import bytes2human
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import socket
 
 def create_image(epd, style='horizontal'):
@@ -112,6 +112,16 @@ def five(epd, runtime=20):
         if(num == runtime):
             break
 
+
+class GRAYS:
+    GRAY1  = 0xff #* white
+    WHITE  = GRAY1
+    GRAY2  = 0xC0 #* Close to white
+    GRAY3  = 0x80 #* Close to black
+    GRAY4  = 0x00 #* black
+    BLACK  = GRAY4
+    CLEAR  = 0xFF #* Clear Frame
+
 class PiStats:
     def Font(size:int = 36, for_unicode:bool = False, font_file_name:str = 'Ubuntu-Regular.ttf'):
         f = 'Font.ttc' if for_unicode else font_file_name
@@ -150,10 +160,6 @@ class PiStats:
         self.logo_image: Image = Image.open(os.path.join(picdir, 'ubuntu-logo.bmp'))
         self.logo_image_width, self.logo_image_height = self.logo_image.size
     
-    def epd_init(self):
-        self.epd.init(0)
-        self.epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
-    
     def resize_logo(self, size: tuple[int, int] = (100, 100)):
         self.logo_image = ImageOps.contain(self.logo_image, size=size)
         self.logo_image_width, self.logo_image_height = self.logo_image.size
@@ -161,10 +167,10 @@ class PiStats:
         
     def logo(self):
         logging.info("Read logo file on window")
-        Himage2 = Image.new('1', horizontal(epd), 255)  # 255: clear the frame
+        Himage2 = Image.new('1', horizontal(self.epd), 255)  # 255: clear the frame
         self.resize_logo()
-        Himage2.paste(self.logo_image, (epd.width + self.logo_image_width, 0))
-        self.epd.display_4Gray(epd.getbuffer_4Gray(Himage2))
+        Himage2.paste(self.logo_image, (self.epd.width + self.logo_image_width, 0))
+        self.epd.display_4Gray(self.epd.getbuffer_4Gray(Himage2))
         time.sleep(50)
     
     def write_text(self, text:str = ''): 
@@ -320,6 +326,27 @@ class PiStats:
                                 dp.mountpoint}
                 # sendWebhookAlert(alertMsg)
 
+    def current_time(self): 
+        #? partial update, just 1 Gary mode
+        logging.info("5.show time, partial update, just 1 Gary mode")
+        self.epd_init(GRAYS.GRAY1)         # 1 Gary mode
+        # epd.Clear(0xFF, 1)
+        #? Create 1 px bit horizontal, staring with white
+        time_image = Image.new('1', horizontal(epd), 255)
+        time_draw = ImageDraw.Draw(time_image)
+        num = 0
+        while (True):
+            time_draw.rectangle((10, 10, 120, 50), fill = 255)
+            time_draw.text((10, 10), time.strftime('%H:%M:%S'), font = PiStats.Font(24), fill= GRAYS.GRAY4)
+            epd.display_1Gray(epd.getbuffer(time_image))
+            num = num + 1
+            if(num == 20):
+                break
+    
+    def epd_init(self, mode: GRAYS, color: GRAYS = GRAYS.CLEAR):
+        self.epd.init(mode)
+        self.epd.Clear(color, mode) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
+    
     def sleep(self):
         logging.info("Goto Sleep...")
         self.epd.sleep()
@@ -351,7 +378,7 @@ if __name__ == '__main__':
 
         # get_network_interfaces(epd, font18)
         pi = PiStats(epd, epdconfig.module_exit)
-        pi.network()
+        pi.logo()
         # pi.memory_usage()
         # pi.cpu_usage()
         # pi.logo()
