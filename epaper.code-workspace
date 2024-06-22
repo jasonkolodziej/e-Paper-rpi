@@ -13,6 +13,7 @@
     "settings": {
         "python.analysis.include": [
             "lib"
-        ]
+        ],
+        "python.analysis.extraPaths": ["./RaspberryPi_JetsonNano/python/lib"]
     }
 }
