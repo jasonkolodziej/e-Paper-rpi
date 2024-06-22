@@ -24,7 +24,19 @@ class SystemStatus:
         self.memory.update()
         self.network.update()
         logging.info("System Status updated")
-        
+    
+    # def show_time(self):
+    #     import time
+    #     from utils import Font
+    #     epd.init(1)         # 1 Gray mode
+    #     epd.Clear(0xFF, 1)
+    #     time_image = Image.new('1', (epd.height, epd.width), 255)
+    #     img_draw = ImageDraw.Draw(time_image)
+    #     while (True):
+    #         time_draw.rectangle((10, 10, 120, 50), fill = 255)
+    #         time_draw.text((10, 10), time.strftime('%H:%M:%S'), font = Font(24), fill = 0)
+    #         epd.display_1Gray(epd.getbuffer(time_image))
+    
     # def display(self, epd):
     #     epd.init()
     #     epd.Clear()

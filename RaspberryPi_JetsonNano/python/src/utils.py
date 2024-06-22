@@ -24,6 +24,13 @@ class Detail:
     def __init__(self, text:str, font: Font = Font(18)):
         self.text = text
         self.font = font
+    
+    def __str__(self):
+        return self.text
+
+    def __repr__(self):
+        return self.text
+
 
 
 class SystemSubSystem(ABC):

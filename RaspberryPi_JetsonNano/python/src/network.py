@@ -3,7 +3,7 @@ import logging
 import socket
 import psutil
 from psutil._common import bytes2human, snicstats, snicaddr, snetio
-from .utils import Font, SystemSubSystem
+from .utils import Detail, Font, SystemSubSystem
 
 # logger = logging.getLogger(__name__)
 
@@ -44,11 +44,16 @@ class NetworkInterface(SystemSubSystem):
             include_ptp (bool, optional): include ptp value. Defaults to False.
             include_io_count (bool, optional): include stats on network packet drop, etc. Defaults to False.
         """
+        super().__init__(header=Detail(nic))
         self.nic = nic
         self.is_up: bool = stats.isup if stats else False
         self.addrs: list[snicaddr] = addrs
         self.stats: snicstats = stats
         self.io_counters: snetio = io_counters
+        
+        #? set details
+        for detail in self.addr_repr():
+            self.add_detail(detail)
     
     def up(self):
         return self.up_map[self.is_up]
@@ -58,12 +63,16 @@ class NetworkInterface(SystemSubSystem):
             if addr.family == socket.AF_INET6:
                 continue
             yield format("%-4s  address: %s" % (self.af_map.get(addr.family, addr.family), addr.address))
-    
+
     
     def update(self):
+        self.details.clear()
         self.addrs = psutil.net_if_addrs().get(self.nic)
         self.stats = psutil.net_if_stats().get(self.nic)
         self.io_counters = psutil.net_io_counters(pernic=True).get(self.nic)
+        
+        for detail in self.addr_repr():
+            self.add_detail(detail)
     
     def other_repr(self, include_broadcast:bool = False, include_netmask: bool = False, include_ptp: bool = False):
         for addr in self.addrs:

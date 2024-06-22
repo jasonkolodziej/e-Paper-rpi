@@ -8,15 +8,25 @@ from .utils import Detail, SystemSubSystem
 class Disk(SystemSubSystem):
     __name__ = "Disk"
     def __init__(self, disk_part: sdiskpart = None):
-        super().__init__(header=Detail("Disk"))
+        super().__init__(header=Detail(str.format("Disk {}:", disk_part.mountpoint)))
         self.disk_part = disk_part
         self.disk_usage: sdiskusage = psutil.disk_usage(self.disk_part.mountpoint)
+        self.add_detail(self.short_repr())
         # self.disk = self.disk_part._asdict()
         # self.disk.update(self.disk_usage._asdict())
 
     def update(self):
+        self.details.clear()
         self.disk_usage = psutil.disk_usage(self.disk_part.mountpoint)
+        self.add_detail(self.short_repr())
         # self.disk.update(self.disk_usage._asdict())
+    
+    def short_repr(self):
+        return u'free: {}/{}, used: {}%'.format(
+            bytes2human(self.disk_usage.free),
+            bytes2human(self.disk_usage.total),
+            self.disk_usage.percent
+        )
     
     def __repr__(self):
         return u'\n\t<{}> mountpoint: {}, total: {}, used: {}, free: {}, used_percentage: {}%'.format(
@@ -57,6 +67,10 @@ class Disks(SystemSubSystem):
         
         for dp in psutil.disk_partitions():
             self.disks.append(Disk(dp))
+    
+    # def details(self):
+        # for d in self.disks:
+        #     self.add_detail(d)
     
     def __repr__(self):
         return u'<{}> {}\n'.format(self.__name__, self.disks)

@@ -1,3 +1,4 @@
+import os
 import psutil
 from psutil._common import bytes2human
 import logging
@@ -8,14 +9,25 @@ from .utils import Detail, SystemSubSystem
 class Processor(SystemSubSystem):
     __name__ = "Processor"
     
-    def __init__(self):
+    def __init__(self, machine_type: str = None):
         super().__init__(header=Detail("Processor"))
+        self.machine_type = os.uname().machine
         logging.debug("collecting cpu usage")
         self.cores:int = psutil.cpu_count(logical=False)
         self.use:float = psutil.cpu_percent()
+        self.add_detail(self.short_repr())
         
     def update(self):
+        self.details.clear()
         self.use = psutil.cpu_percent()
+        self.add_detail(self.short_repr())
+        
+    def short_repr(self):
+        return u'processor: {}, {} cores, usage: {}%'.format(
+            self.machine_type,
+            self.cores,
+            self.use
+        )
     
     def __repr__(self):
         return u'<{}> cores: {}, usage: {}%'.format(
