@@ -3,14 +3,15 @@
 import sys
 import os
 picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
+fontdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'font')
 libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
 if os.path.exists(libdir):
     sys.path.append(libdir)
 
 import logging
 from waveshare_epd import epd3in7
-import time
-from PIL import Image, ImageDraw, ImageFont
+from datetime import timedelta, datetime, time
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import traceback
 #? Jason's imports
 import psutil
@@ -110,6 +111,7 @@ def five(epd, runtime=20):
             break
 
 class PiStats:
+    font48 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 48)
     font36 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 36)
     font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
     font18 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 18)
@@ -132,12 +134,47 @@ class PiStats:
     }
     def __init__(self, epd):
         self.epd = epd
+        self.epd_init()
+        #? network stats
         self.network_ifaces: dict[str, list[psutil.snicaddr]] = psutil.net_if_addrs().items()
         self.network_stats: dict[str, psutil.snicstats] = psutil.net_if_stats()
+        #? cpu stats
+        self.cpu_capture: datetime = datetime.now()
+        self.cpu_use: float = psutil.cpu_percent()
+        self.cpu_cores: int = psutil.cpu_count()
+        #? mem stats
+        self.memory_stats: psutil.svmem = psutil.virtual_memory()
+        #? logo
+        self.name = os.uname()
+        logging.debug(self.name)
+        self.logo_image: Image = Image.open(os.path.join(picdir, 'ubuntu-logo.bmp'))
+        self.logo_image_width, self.logo_image_height = self.logo_image.size
     
-    def edp_init(self):
+    def epd_init(self):
         self.epd.init(0)
         self.epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
+    
+    def resize_logo(self, size: tuple[int, int] = (100, 100)):
+        self.logo_image = ImageOps.contain(self.logo_image, size=size)
+        self.logo_image_width, self.logo_image_height = self.logo_image.size
+        logging.debug("width: %d, height: %d", self.logo_image_width, self.logo_image_height)
+    
+    def logo(self):
+        logging.info("Read logo file on window")
+        Himage2 = Image.new('1', horizontal(epd), 255)  # 255: clear the frame
+        self.resize_logo()
+        Himage2.paste(self.logo_image, (epd.width + self.logo_image_width, 0))
+        self.epd.display_4Gray(epd.getbuffer_4Gray(Himage2))
+        time.sleep(50)
+    
+    def write_text(self, text:str = ''): 
+        Himage = Image.new('L', horizontal(epd), 0xFF)  #? 0xFF: clear the frame
+        draw = ImageDraw.Draw(Himage)
+        draw.text((10, 0), text='', font = self.font48, fill = 0)
+        draw.text((10, 50), '', font = font24, fill = 0)
+        epd.display_4Gray(epd.getbuffer_4Gray(Himage))
+        time.sleep(300)
+        
     def filter_stats(self, 
                      include_broadcast:bool = False, include_netmask: bool = False,
                      include_ptp: bool = False, include_io_count: bool = False):
@@ -226,6 +263,64 @@ class PiStats:
         epd.display_4Gray(epd.getbuffer_4Gray(Himage))
         time.sleep(300)
 
+    def cpu_usage(self):
+        logging.debug("collecting cpu usage")
+        cores = self.cpu_cores
+        
+        # t1 = timedelta(self.cpu_capture)
+        # usage1 = self.cpu_use
+        # t2 = self.cpu_capture = datetime.now()
+        # self.cpu_use = psutil.cpu_percent()
+        # delta_t = t2 - t1        
+        # delta_usage = self.cpu_use - usage1
+        # logging.debug("in %s CPU usage was at %s %", delta_t.second, delta_usage)
+        
+        print("CPU usage %: ", self.cpu_use, "%")
+        print("CPU count: ", self.cpu_cores, "cores")
+        cpuUsagePercent = psutil.cpu_percent(1)
+        print("CPU usage in last 10 secs: ", cpuUsagePercent, "%")
+        # if (cpuUsagePercent > 20):
+            # print("Sending alert on high cpu usage.")
+            # alertMsg = {"device_name": os.uname().nodename, "cpu_alert": "cpu usage is high: "+ str(cpuUsagePercent) + "%"}
+            # sendWebhookAlert(alertMsg)
+
+
+    def memory_usage(self):
+        logging.debug("collecting memory usage")
+        total = bytes2human(self.memory_stats.total)
+        used = bytes2human(self.memory_stats.used)
+        used_percent = self.memory_stats.percent
+        avail = bytes2human(self.memory_stats.available)
+        swap_mem_percent = psutil.swap_memory().percent
+        logging.debug("Total: %s\nUsed: %s\n Avail:%s\n", total, used, avail)
+        # print("Mem Total:", int(psutil.virtual_memory().total/(1024*1024)), "MB")
+        # print("Mem Used:", int(psutil.virtual_memory().used/(1024*1024)), "MB")
+        # print("Mem Available:", int(psutil.virtual_memory().available/(1024*1024)), "MB")
+        # memUsagePercent = 
+        print("Mem Usage %:", used_percent, "%")
+        print("Swap Usage %:", swap_mem_percent, "%")
+        # if (memUsagePercent > 80):
+        #     print("Sending alert on high memory usage.")
+        #     alertMsg = {"device_name": os.uname().nodename, "memory_alert": "memory usage is high: "+ str(memUsagePercent) + "%"}
+            # sendWebhookAlert(alertMsg)
+
+def getDiskUsage():
+    for dp in psutil.disk_partitions():
+        # print(x)
+        print("\nDisk usage of partition ", dp.mountpoint, ": ") 
+        print("Total: ", int(psutil.disk_usage(dp.mountpoint).total/(1024*1024)), "MB")
+        print("Used: ", int(psutil.disk_usage(dp.mountpoint).used/(1024*1024)), "MB")
+        print("Free: ", int(psutil.disk_usage(dp.mountpoint).free/(1024*1024)), "MB")
+        diskUsagePercent = psutil.disk_usage(dp.mountpoint).percent
+        print("Used %: ", diskUsagePercent, "%")
+        if (diskUsagePercent > 60):
+            print("Sending alert on high disk usage.")
+            alertMsg = {"device_name": os.uname().nodename, "disk_alert": "disk usage is high: "+ str(diskUsagePercent) + "%" +" in partition: " + 
+                            dp.mountpoint}
+            # sendWebhookAlert(alertMsg)
+
+
+
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -241,16 +336,20 @@ try:
     epd.init(0)
     epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
     
-    font36 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 36)
-    font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
-    font18 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 18)
+    font36 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 36)
+    font24 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 24)
+    font18 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 18)
     # four(epd)
     # five(epd, 80)
 
 
     # get_network_interfaces(epd, font18)
-    pi = PiStats(epd=epd)
-    pi.filter_stats()
+    pi = PiStats(epd)
+    pi.memory_usage()
+    pi.cpu_usage()
+    # pi.logo()
+    # pi.filter_stats()
+    # three(epd)
     
     logging.info("Clear...")
     epd.init(0)
