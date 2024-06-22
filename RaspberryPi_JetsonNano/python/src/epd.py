@@ -123,9 +123,7 @@ class GRAYS:
     CLEAR  = 0xFF #* Clear Frame
 
 class PiStats:
-    def Font(size:int = 36, for_unicode:bool = False, font_file_name:str = 'Ubuntu-Regular.ttf'):
-        f = 'Font.ttc' if for_unicode else font_file_name
-        return ImageFont.truetype(os.path.join(fontdir, f), size=size) 
+    
     af_map = {
         socket.AF_INET: 'IPv4',
         socket.AF_INET6: 'IPv6',
@@ -174,6 +172,62 @@ class PiStats:
         self.epd.display_4Gray(self.epd.getbuffer_4Gray(spot))
         time.sleep(50)
         
+
+    def cpu_usage(self):
+        logging.debug("collecting cpu usage")
+        cores = self.cpu_cores
+        
+        # t1 = timedelta(self.cpu_capture)
+        # usage1 = self.cpu_use
+        # t2 = self.cpu_capture = datetime.now()
+        # self.cpu_use = psutil.cpu_percent()
+        # delta_t = t2 - t1        
+        # delta_usage = self.cpu_use - usage1
+        # logging.debug("in %s CPU usage was at %s %", delta_t.second, delta_usage)
+        
+        print("CPU usage %: ", self.cpu_use, "%")
+        print("CPU count: ", self.cpu_cores, "cores")
+        cpuUsagePercent = psutil.cpu_percent(1)
+        print("CPU usage in last 10 secs: ", cpuUsagePercent, "%")
+        # if (cpuUsagePercent > 20):
+            # print("Sending alert on high cpu usage.")
+            # alertMsg = {"device_name": os.uname().nodename, "cpu_alert": "cpu usage is high: "+ str(cpuUsagePercent) + "%"}
+            # sendWebhookAlert(alertMsg)
+    
+    def memory_usage(self):
+        logging.debug("collecting memory usage")
+        total = bytes2human(self.memory_stats.total)
+        used = bytes2human(self.memory_stats.used)
+        used_percent = self.memory_stats.percent
+        avail = bytes2human(self.memory_stats.available)
+        swap_mem_percent = psutil.swap_memory().percent
+        logging.debug("Total: %s\nUsed: %s\n Avail:%s\n", total, used, avail)
+        # print("Mem Total:", int(psutil.virtual_memory().total/(1024*1024)), "MB")
+        # print("Mem Used:", int(psutil.virtual_memory().used/(1024*1024)), "MB")
+        # print("Mem Available:", int(psutil.virtual_memory().available/(1024*1024)), "MB")
+        # memUsagePercent = 
+        print("Mem Usage %:", used_percent, "%")
+        print("Swap Usage %:", swap_mem_percent, "%")
+        # if (memUsagePercent > 80):
+        #     print("Sending alert on high memory usage.")
+        #     alertMsg = {"device_name": os.uname().nodename, "memory_alert": "memory usage is high: "+ str(memUsagePercent) + "%"}
+            # sendWebhookAlert(alertMsg)
+
+    def disk_usage(self):
+        for dp in psutil.disk_partitions():
+            # print(x)
+            print("\nDisk usage of partition ", dp.mountpoint, ": ") 
+            print("Total: ", int(psutil.disk_usage(dp.mountpoint).total/(1024*1024)), "MB")
+            print("Used: ", int(psutil.disk_usage(dp.mountpoint).used/(1024*1024)), "MB")
+            print("Free: ", int(psutil.disk_usage(dp.mountpoint).free/(1024*1024)), "MB")
+            diskUsagePercent = psutil.disk_usage(dp.mountpoint).percent
+            print("Used %: ", diskUsagePercent, "%")
+            if (diskUsagePercent > 60):
+                print("Sending alert on high disk usage.")
+                alertMsg = {"device_name": os.uname().nodename, "disk_alert": "disk usage is high: "+ str(diskUsagePercent) + "%" +" in partition: " + 
+                                dp.mountpoint}
+                # sendWebhookAlert(alertMsg)
+
     def network(self, 
                      include_broadcast:bool = False, include_netmask: bool = False,
                      include_ptp: bool = False, include_io_count: bool = False):
@@ -264,60 +318,6 @@ class PiStats:
         epd.display_4Gray(epd.getbuffer_4Gray(Himage))
         time.sleep(300)
 
-    def cpu_usage(self):
-        logging.debug("collecting cpu usage")
-        cores = self.cpu_cores
-        
-        # t1 = timedelta(self.cpu_capture)
-        # usage1 = self.cpu_use
-        # t2 = self.cpu_capture = datetime.now()
-        # self.cpu_use = psutil.cpu_percent()
-        # delta_t = t2 - t1        
-        # delta_usage = self.cpu_use - usage1
-        # logging.debug("in %s CPU usage was at %s %", delta_t.second, delta_usage)
-        
-        print("CPU usage %: ", self.cpu_use, "%")
-        print("CPU count: ", self.cpu_cores, "cores")
-        cpuUsagePercent = psutil.cpu_percent(1)
-        print("CPU usage in last 10 secs: ", cpuUsagePercent, "%")
-        # if (cpuUsagePercent > 20):
-            # print("Sending alert on high cpu usage.")
-            # alertMsg = {"device_name": os.uname().nodename, "cpu_alert": "cpu usage is high: "+ str(cpuUsagePercent) + "%"}
-            # sendWebhookAlert(alertMsg)
-    
-    def memory_usage(self):
-        logging.debug("collecting memory usage")
-        total = bytes2human(self.memory_stats.total)
-        used = bytes2human(self.memory_stats.used)
-        used_percent = self.memory_stats.percent
-        avail = bytes2human(self.memory_stats.available)
-        swap_mem_percent = psutil.swap_memory().percent
-        logging.debug("Total: %s\nUsed: %s\n Avail:%s\n", total, used, avail)
-        # print("Mem Total:", int(psutil.virtual_memory().total/(1024*1024)), "MB")
-        # print("Mem Used:", int(psutil.virtual_memory().used/(1024*1024)), "MB")
-        # print("Mem Available:", int(psutil.virtual_memory().available/(1024*1024)), "MB")
-        # memUsagePercent = 
-        print("Mem Usage %:", used_percent, "%")
-        print("Swap Usage %:", swap_mem_percent, "%")
-        # if (memUsagePercent > 80):
-        #     print("Sending alert on high memory usage.")
-        #     alertMsg = {"device_name": os.uname().nodename, "memory_alert": "memory usage is high: "+ str(memUsagePercent) + "%"}
-            # sendWebhookAlert(alertMsg)
-
-    def disk_usage(self):
-        for dp in psutil.disk_partitions():
-            # print(x)
-            print("\nDisk usage of partition ", dp.mountpoint, ": ") 
-            print("Total: ", int(psutil.disk_usage(dp.mountpoint).total/(1024*1024)), "MB")
-            print("Used: ", int(psutil.disk_usage(dp.mountpoint).used/(1024*1024)), "MB")
-            print("Free: ", int(psutil.disk_usage(dp.mountpoint).free/(1024*1024)), "MB")
-            diskUsagePercent = psutil.disk_usage(dp.mountpoint).percent
-            print("Used %: ", diskUsagePercent, "%")
-            if (diskUsagePercent > 60):
-                print("Sending alert on high disk usage.")
-                alertMsg = {"device_name": os.uname().nodename, "disk_alert": "disk usage is high: "+ str(diskUsagePercent) + "%" +" in partition: " + 
-                                dp.mountpoint}
-                # sendWebhookAlert(alertMsg)
 
     def current_time(self): 
         #? partial update, just 1 Gary mode

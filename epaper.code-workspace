@@ -11,9 +11,10 @@
         ]
     },
     "settings": {
-        "python.analysis.include": [
-            "lib"
-        ],
-        "python.analysis.extraPaths": ["./RaspberryPi_JetsonNano/python/lib"]
+    //     "python.analysis.include": [
+    //         "lib"
+    //     ],
+    //     "python.analysis.extraPaths": ["./RaspberryPi_JetsonNano/python/lib",
+    // "./RaspberryPi_JetsonNano/python/lib"]
     }
 }
