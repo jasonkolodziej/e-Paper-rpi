@@ -10,6 +10,7 @@ if os.path.exists(libdir):
     sys.path.append(libdir)
 
 import logging
+from typing import Callable
 from waveshare_epd import epd3in7, epdconfig
 # from datetime import timedelta, datetime, time
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -130,9 +131,9 @@ class PiStats:
         False: u'✕'
     }
     
-    def __init__(self, epd):
+    def __init__(self, epd, exit_cb: Callable):
         self.epd = epd
-        # self.__exit__ = exit_cb
+        self.__on_exit__ = exit_cb
         # self.epd_init()
         #? network stats
         self.network_ifaces: dict[str, list[psutil.snicaddr]] = psutil.net_if_addrs().items()
@@ -323,10 +324,13 @@ class PiStats:
         logging.info("Goto Sleep...")
         self.epd.sleep()
     
-    # def __exit__(self):
+    def __exit__(self, cleanup:bool = True):
+        self.epd.Clear(0xFF, 0)
+        return self.__on_exit__(cleanup=cleanup)
+        
 
 
-
+pi: PiStats = None
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -346,7 +350,7 @@ if __name__ == '__main__':
 
 
         # get_network_interfaces(epd, font18)
-        pi = PiStats(epd)
+        pi = PiStats(epd, epdconfig.module_exit)
         pi.network()
         # pi.memory_usage()
         # pi.cpu_usage()
@@ -365,5 +369,6 @@ if __name__ == '__main__':
         
     except KeyboardInterrupt:    
         logging.info("ctrl + c:")
-        epdconfig.module_exit(cleanup=True)
+        pi.__exit__()
+        # epdconfig.module_exit(cleanup=True)
         exit()
