@@ -2,15 +2,17 @@
 # -*- coding:utf-8 -*-
 import sys
 import os
+import time
 picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
 fontdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'font')
 libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
+
 if os.path.exists(libdir):
     sys.path.append(libdir)
 
 import logging
 from waveshare_epd import epd3in7
-from datetime import timedelta, datetime, time
+# from datetime import timedelta, datetime, time
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import traceback
 #? Jason's imports
@@ -111,10 +113,10 @@ def five(epd, runtime=20):
             break
 
 class PiStats:
-    __font_name__ = 'Ubuntu-Regular.ttf'
     
-    def Font(self, size:int = 36):
-      return ImageFont.truetype(os.path.join(fontdir, PiStats.__font_name__), size=size)  
+    def Font(size:int = 36, for_unicode:bool = False, font_file_name:str = 'Ubuntu-Regular.ttf'):
+        f = 'Font.ttc' if for_unicode else font_file_name
+        return ImageFont.truetype(os.path.join(fontdir, f), size=size)
     
     af_map = {
         socket.AF_INET: 'IPv4',
@@ -133,12 +135,12 @@ class PiStats:
     
     def __init__(self, epd):
         self.epd = epd
-        self.epd_init()
+        # self.epd_init()
         #? network stats
         self.network_ifaces: dict[str, list[psutil.snicaddr]] = psutil.net_if_addrs().items()
         self.network_stats: dict[str, psutil.snicstats] = psutil.net_if_stats()
         #? cpu stats
-        self.cpu_capture: datetime = datetime.now()
+        # self.cpu_capture: datetime = datetime.now()
         self.cpu_use: float = psutil.cpu_percent()
         self.cpu_cores: int = psutil.cpu_count()
         #? mem stats
@@ -157,7 +159,7 @@ class PiStats:
         self.logo_image = ImageOps.contain(self.logo_image, size=size)
         self.logo_image_width, self.logo_image_height = self.logo_image.size
         logging.debug("width: %d, height: %d", self.logo_image_width, self.logo_image_height)
-    
+        
     def logo(self):
         logging.info("Read logo file on window")
         Himage2 = Image.new('1', horizontal(epd), 255)  # 255: clear the frame
@@ -206,7 +208,8 @@ class PiStats:
         io_counters = psutil.net_io_counters(pernic=True) if include_io_count else None
         for nic, addrs in self.network_ifaces:
             x = 0
-            font = self.Font(18)
+            font = PiStats.Font(16)
+            sFont = PiStats.Font(16, for_unicode=True)
             if "docker" in nic or nic == "lo":
                 continue
             #? Stats
@@ -215,13 +218,14 @@ class PiStats:
             mtu = stats[nic].mtu if nic in stats else None
             is_up = self.up_map[stats[nic].isup] if nic in stats else self.up_map[False]
             #? More stats:
-            c = format("(%s) %s:" % (is_up, nic))
+            c = format("        %s:" %  nic)
+            draw.text((x,y), text=format("(%s)" % is_up), font=sFont)
             logging.debug(c)
             draw.text((x, y), text=c, font=font)
             y += font.size
             for addr in addrs:
                 x = 30
-                font = self.Font(16)
+                font = PiStats.Font(14)
                 if addr.family == socket.AF_INET6: #? just get ipv4 and MAC
                     continue
                 # data = str.format(" {} address: {}", self.af_map.get(addr.family, addr.family), addr.address )
@@ -303,20 +307,20 @@ class PiStats:
         #     alertMsg = {"device_name": os.uname().nodename, "memory_alert": "memory usage is high: "+ str(memUsagePercent) + "%"}
             # sendWebhookAlert(alertMsg)
 
-def getDiskUsage():
-    for dp in psutil.disk_partitions():
-        # print(x)
-        print("\nDisk usage of partition ", dp.mountpoint, ": ") 
-        print("Total: ", int(psutil.disk_usage(dp.mountpoint).total/(1024*1024)), "MB")
-        print("Used: ", int(psutil.disk_usage(dp.mountpoint).used/(1024*1024)), "MB")
-        print("Free: ", int(psutil.disk_usage(dp.mountpoint).free/(1024*1024)), "MB")
-        diskUsagePercent = psutil.disk_usage(dp.mountpoint).percent
-        print("Used %: ", diskUsagePercent, "%")
-        if (diskUsagePercent > 60):
-            print("Sending alert on high disk usage.")
-            alertMsg = {"device_name": os.uname().nodename, "disk_alert": "disk usage is high: "+ str(diskUsagePercent) + "%" +" in partition: " + 
-                            dp.mountpoint}
-            # sendWebhookAlert(alertMsg)
+    def disk_usage(self):
+        for dp in psutil.disk_partitions():
+            # print(x)
+            print("\nDisk usage of partition ", dp.mountpoint, ": ") 
+            print("Total: ", int(psutil.disk_usage(dp.mountpoint).total/(1024*1024)), "MB")
+            print("Used: ", int(psutil.disk_usage(dp.mountpoint).used/(1024*1024)), "MB")
+            print("Free: ", int(psutil.disk_usage(dp.mountpoint).free/(1024*1024)), "MB")
+            diskUsagePercent = psutil.disk_usage(dp.mountpoint).percent
+            print("Used %: ", diskUsagePercent, "%")
+            if (diskUsagePercent > 60):
+                print("Sending alert on high disk usage.")
+                alertMsg = {"device_name": os.uname().nodename, "disk_alert": "disk usage is high: "+ str(diskUsagePercent) + "%" +" in partition: " + 
+                                dp.mountpoint}
+                # sendWebhookAlert(alertMsg)
 
 
 
@@ -335,9 +339,9 @@ try:
     epd.init(0)
     epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
     
-    font36 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttc'), 36)
-    font24 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttc'), 24)
-    font18 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttc'), 18)
+    font36 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 36)
+    font24 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 24)
+    font18 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 18)
     # four(epd)
     # five(epd, 80)
 
