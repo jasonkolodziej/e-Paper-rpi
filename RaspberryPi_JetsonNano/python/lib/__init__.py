@@ -1,1 +1,1 @@
-from . import waveshare_epd
+from waveshare_epd import *

@@ -1,8 +1,7 @@
-#!/usr/bin/python
-# -*- coding:utf-8 -*-
 import sys
 import os
 import time
+import logging
 picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
 fontdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'font')
 libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
@@ -11,7 +10,7 @@ if os.path.exists(libdir):
     sys.path.append(libdir)
 
 import logging
-from waveshare_epd import epd3in7
+from waveshare_epd import epd3in7, epdconfig
 # from datetime import timedelta, datetime, time
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import traceback
@@ -113,11 +112,9 @@ def five(epd, runtime=20):
             break
 
 class PiStats:
-    
     def Font(size:int = 36, for_unicode:bool = False, font_file_name:str = 'Ubuntu-Regular.ttf'):
         f = 'Font.ttc' if for_unicode else font_file_name
-        return ImageFont.truetype(os.path.join(fontdir, f), size=size)
-    
+        return ImageFont.truetype(os.path.join(fontdir, f), size=size) 
     af_map = {
         socket.AF_INET: 'IPv4',
         socket.AF_INET6: 'IPv6',
@@ -135,6 +132,7 @@ class PiStats:
     
     def __init__(self, epd):
         self.epd = epd
+        # self.__exit__ = exit_cb
         # self.epd_init()
         #? network stats
         self.network_ifaces: dict[str, list[psutil.snicaddr]] = psutil.net_if_addrs().items()
@@ -286,8 +284,7 @@ class PiStats:
             # print("Sending alert on high cpu usage.")
             # alertMsg = {"device_name": os.uname().nodename, "cpu_alert": "cpu usage is high: "+ str(cpuUsagePercent) + "%"}
             # sendWebhookAlert(alertMsg)
-
-
+    
     def memory_usage(self):
         logging.debug("collecting memory usage")
         total = bytes2human(self.memory_stats.total)
@@ -322,50 +319,51 @@ class PiStats:
                                 dp.mountpoint}
                 # sendWebhookAlert(alertMsg)
 
-
-
-
-logging.basicConfig(level=logging.DEBUG)
-
-
-
-
-
-
-try:
-    logging.info("epd3in7 Demo")
-    epd = epd3in7.EPD()
-    logging.info("init and Clear")
-    epd.init(0)
-    epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
+    def sleep(self):
+        logging.info("Goto Sleep...")
+        self.epd.sleep()
     
-    font36 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 36)
-    font24 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 24)
-    font18 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 18)
-    # four(epd)
-    # five(epd, 80)
+    # def __exit__(self):
 
 
-    # get_network_interfaces(epd, font18)
-    pi = PiStats(epd)
-    pi.network()
-    # pi.memory_usage()
-    # pi.cpu_usage()
-    # pi.logo()
-    # pi.filter_stats()
-    # three(epd)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    try:
+        logging.info("epd3in7 Demo")
+        epd = epd3in7.EPD()
+        logging.info("init and Clear")
+        epd.init(0)
+        epd.Clear(0xFF, 0) #? 0xFF: clear the frame, 0: 4Gray (opts: or 1: 1Gray)
     
-    logging.info("Clear...")
-    epd.init(0)
-    epd.Clear(0xFF, 0)
     
-    logging.info("Goto Sleep...")
-    epd.sleep()
-    
-except IOError as e:
-    logging.info(e)
-    
-except KeyboardInterrupt:    
-    logging.info("ctrl + c:")
-    epd3in7.epdconfig.module_exit(cleanup=True)
-    exit()
+        font36 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 36)
+        font24 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 24)
+        font18 = ImageFont.truetype(os.path.join(fontdir, 'Ubuntu-Regular.ttf'), 18)
+        # four(epd)
+        # five(epd, 80)
+
+
+        # get_network_interfaces(epd, font18)
+        pi = PiStats(epd)
+        pi.network()
+        # pi.memory_usage()
+        # pi.cpu_usage()
+        # pi.logo()
+        # pi.filter_stats()
+        # three(epd)
+        
+        logging.info("Clear...")
+        epd.init(0)
+        epd.Clear(0xFF, 0)
+        
+        
+        
+    except IOError as e:
+        logging.info(e)
+        
+    except KeyboardInterrupt:    
+        logging.info("ctrl + c:")
+        epdconfig.module_exit(cleanup=True)
+        exit()
