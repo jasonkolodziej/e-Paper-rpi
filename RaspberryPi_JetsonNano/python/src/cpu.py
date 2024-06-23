@@ -29,6 +29,9 @@ class Processor(SystemSubSystem):
             self.use
         )
     
+    def display(self, epd):
+        pass
+    
     def __repr__(self):
         return u'<{}> cores: {}, usage: {}%'.format(
             self.__name__, 

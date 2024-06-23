@@ -3,10 +3,14 @@ import os
 import segno
 import json
 from datetime import datetime
+from PIL import Image
 from .disk import Disks
 from .cpu import Processor
 from .memory import Memory
 from .network import Network
+
+picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
+logging.info(picdir)
 
 class SystemStatus:
     __name__ = "SystemStatus"
@@ -24,6 +28,9 @@ class SystemStatus:
         self.memory.update()
         self.network.update()
         logging.info("System Status updated")
+    
+    def logo_loader(self, file_name = 'ubuntu-logo.bmp') -> Image:
+        return Image.open(os.path.join(picdir, file_name))
     
     # def show_time(self):
     #     import time

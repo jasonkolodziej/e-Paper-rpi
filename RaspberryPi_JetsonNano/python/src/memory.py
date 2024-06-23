@@ -22,6 +22,9 @@ class Memory(SystemSubSystem):
         self.swap = psutil.swap_memory()
         self.add_detail(self.virt_short_repr())
         self.add_detail(self.swap_short_repr())
+    
+    def display(self, epd):
+        pass
         
     def virt_short_repr(self):
         return u'free: {}/{}, used: {}%'.format(

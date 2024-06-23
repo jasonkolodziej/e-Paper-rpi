@@ -3,6 +3,7 @@ import logging
 import socket
 import psutil
 from psutil._common import bytes2human, snicstats, snicaddr, snetio
+from PIL import Image, ImageDraw
 from .utils import Detail, Font, SystemSubSystem
 
 # logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class NetworkInterface(SystemSubSystem):
             include_ptp (bool, optional): include ptp value. Defaults to False.
             include_io_count (bool, optional): include stats on network packet drop, etc. Defaults to False.
         """
-        super().__init__(header=Detail(nic))
+        super().__init__(header=Detail(nic, Font(14)))
         self.nic = nic
         self.is_up: bool = stats.isup if stats else False
         self.addrs: list[snicaddr] = addrs
@@ -114,13 +115,22 @@ class NetworkInterface(SystemSubSystem):
             "io_counters": self.io_counters._asdict() if self.io_counters else None
         }
     
-
+    def display(self, epd, drawer: ImageDraw, x: int = 0, y: int = 0) -> tuple[int, int] | None:
+        # self.drawer(epd)
+        drawer.text((x,y), text=self.header.text, font=self.header.font)
+        y += self.header.font.size
+        for detail in self.details:
+            drawer.text((x,y), text=detail.text, font=detail.font)
+            y += detail.font.size
+        return (x, y)
+        
 
 class Network(SystemSubSystem):
     __name__ = "Network"
     def __init__(self, 
                 include_broadcast:bool = False, include_netmask: bool = False,
                 include_ptp: bool = False, include_io_count: bool = False) -> None:
+        # super()
         self.network_ifaces: list[NetworkInterface] = []
         
         logging.info("Filter network info")
@@ -138,6 +148,13 @@ class Network(SystemSubSystem):
     
     def __repr__(self):
         return u'<{}>\n{}'.format(self.__name__, self.network_ifaces)
+    
+    def display(self, epd, drawer: ImageDraw = None, x: int = 0, y: int = 0) -> tuple[int, int] | None:
+        self.drawer(epd)
+        for n in self.network_ifaces:
+            logging.debug("displaying network %s", n.header.text)
+            x, y = n.display(None, drawer=self.draw, x=x, y=y)
+        epd.display(epd.getbuffer(self.image))
     
     def __dict__(self):
         return {

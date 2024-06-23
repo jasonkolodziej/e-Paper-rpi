@@ -47,6 +47,9 @@ class Disk(SystemSubSystem):
             "used_percentage": self.disk_usage.percent
         }
     
+    def display(self, epd):
+        pass
+    
     # def display(self, epd):
     #         print("\nDisk usage of partition ", dp.mountpoint, ": ") 
     #         print("Total: ", int(psutil.disk_usage(dp.mountpoint).total/(1024*1024)), "MB")
@@ -83,3 +86,6 @@ class Disks(SystemSubSystem):
         return {
             "disks": [disk.__dict__() for disk in self.disks]
         }
+        
+    def display(self, epd):
+        pass
