@@ -31,8 +31,9 @@ if __name__ == '__main__':
         # epd.Clear(0xFF, 0)
         # partial(epd)
         s = SystemStatus()
-        network: Network = s.network
-        network.display(epd)
+        s.logo(epd)
+        # network: Network = s.network
+        # network.display(epd)
         time.sleep(300)
         clear_and_sleep(epd)
         # for net in network.network_ifaces:

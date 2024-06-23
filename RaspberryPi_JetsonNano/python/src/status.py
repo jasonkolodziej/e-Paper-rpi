@@ -7,6 +7,8 @@ from PIL import Image
 from .disk import Disks
 from .cpu import Processor
 from .memory import Memory
+from .utils import horizontal
+from PIL import ImageOps
 from .network import Network
 
 picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
@@ -31,6 +33,24 @@ class SystemStatus:
     
     def logo_loader(self, file_name = 'ubuntu-logo.bmp') -> Image:
         return Image.open(os.path.join(picdir, file_name))
+    
+    def resize_logo(self, size: tuple[int, int] = (75, 75)) -> Image:
+        logo_image = self.logo_loader()
+        logo_image = ImageOps.contain(logo_image, size=size)
+        logo_image_width, logo_image_height = logo_image.size
+        logging.debug("width: %d, height: %d", logo_image_width, logo_image_height)
+        return logo_image
+        
+    def logo(self, epd):
+        logging.info("Read logo file on window")
+        #? Create 1 px bit horizontal, staring with white
+        spot = Image.new('1', horizontal(epd), 255)  # 255: clear the frame
+        logo = self.resize_logo()
+        width, height = logo.size
+        spot.paste(logo, (epd.width + width, 0))
+        buffer = epd.getbuffer(spot) # epd.getbuffer_4Gray(spot)
+        epd.display_fast(buffer)
+        # time.sleep(50)
     
     # def show_time(self):
     #     import time
