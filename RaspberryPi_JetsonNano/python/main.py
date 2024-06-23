@@ -15,8 +15,8 @@ font24 = ImageFont.truetype(os.path.join(fontdir, 'Font.ttc'), 24)
 
 def clear_and_sleep(epd):
     logging.info("Clear...")
-    epd.init(0)
-    epd.Clear(0xFF, 0)
+    epd.init()
+    epd.Clear(0xFF)
     logging.info("Goto Sleep...")
     epd.sleep()
     
@@ -33,6 +33,8 @@ if __name__ == '__main__':
         s = SystemStatus()
         network: Network = s.network
         network.display(epd)
+        time.sleep(300)
+        clear_and_sleep(epd)
         # for net in network.network_ifaces:
         #     print(net.header)
         #     print(net.details)
@@ -40,7 +42,7 @@ if __name__ == '__main__':
         # print(s.to_json())
     except IOError as e:
         logging.info(e)
-    
+        clear_and_sleep(epd)
     except KeyboardInterrupt:    
         logging.info("ctrl + c:")
         epd_board.epdconfig.module_exit(cleanup=True)

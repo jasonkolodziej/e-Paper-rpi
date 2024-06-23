@@ -117,7 +117,10 @@ class NetworkInterface(SystemSubSystem):
     
     def display(self, epd, drawer: ImageDraw, x: int = 0, y: int = 0) -> tuple[int, int] | None:
         # self.drawer(epd)
-        drawer.text((x,y), text=self.header.text, font=self.header.font)
+        main_line = format("(%s)" % self.up())
+        mFont = Font(self.header.font.size, True)
+        drawer.text((x,y), text=main_line, font=mFont)
+        drawer.text((x,y), text=format("        %s" % self.header.text), font=self.header.font)
         y += self.header.font.size
         for detail in self.details:
             drawer.text((x,y), text=detail.text, font=detail.font)
