@@ -1,6 +1,7 @@
 import logging
 import os
 import segno
+# import qrcode
 import json
 from datetime import datetime
 from PIL import Image
@@ -11,7 +12,7 @@ from .utils import horizontal
 from PIL import ImageOps
 from .network import Network
 
-picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
+picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pics')
 logging.info(picdir)
 
 class SystemStatus:
@@ -31,10 +32,15 @@ class SystemStatus:
         self.network.update()
         logging.info("System Status updated")
     
-    def logo_loader(self, file_name = 'ubuntu-logo.bmp') -> Image:
-        return Image.open(os.path.join(picdir, file_name))
+    def logo_loader(self, file_name = 'ubuntu-logo-bw.png') -> Image:
+        im = Image.open(os.path.join(picdir, file_name))
+        # If is png image
+        if im.format == 'PNG':
+            # and is not RGBA
+            return im.convert('RGBA') if im.mode != 'RGBA' else im
+        return im
     
-    def resize_logo(self, size: tuple[int, int] = (75, 75)) -> Image:
+    def resize_logo(self, size: tuple[int, int] = (100, 100)) -> Image:
         logo_image = self.logo_loader()
         logo_image = ImageOps.contain(logo_image, size=size)
         logo_image_width, logo_image_height = logo_image.size
@@ -44,7 +50,7 @@ class SystemStatus:
     def logo(self, epd):
         logging.info("Read logo file on window")
         #? Create 1 px bit horizontal, staring with white
-        spot = Image.new('1', horizontal(epd), 255)  # 255: clear the frame
+        spot = Image.new('L', horizontal(epd), 255)  # 255: clear the frame
         logo = self.resize_logo()
         width, height = logo.size
         spot.paste(logo, (epd.width + width, 0))
@@ -119,7 +125,10 @@ class SystemStatus:
         return json.dumps(self.__dict__())
     
     def generate_qr(self):
-        segno.make(content=json.dumps(self.general_dict())).save("system_status.png")
+        # return qrcode.make(data=))
+        self.qr_code = segno.make(content=json.dumps(self.general_dict()))
+        return self.qr_code.to_pil(border=2) # to_artistic(background="pics/ubuntu-logo-bw.png", target="ubuntu-qr.png", )
+    
     def __repr__(self):
         return u'<{}>\n general: {},\n cpu: {},\n memory: {},\n network: {},\n disks: {}'.format(
             self.__name__, 

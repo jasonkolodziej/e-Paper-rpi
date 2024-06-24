@@ -2,7 +2,7 @@ import os
 import psutil
 from psutil._common import bytes2human
 import logging
-
+from PIL import ImageDraw
 # from .libs.waveshare_epd import epd2in13_V2
 from .utils import Detail, SystemSubSystem
 
@@ -29,7 +29,7 @@ class Processor(SystemSubSystem):
             self.use
         )
     
-    def display(self, epd):
+    def display(self, epd, drawer: ImageDraw = None, x: int = 0, y: int = 0) -> tuple[int, int]:
         pass
     
     def __repr__(self):

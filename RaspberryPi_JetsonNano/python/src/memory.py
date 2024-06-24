@@ -1,6 +1,7 @@
 from psutil._common import bytes2human
 import psutil
 import logging
+from PIL import ImageDraw
 
 from .utils import Detail, SystemSubSystem
 
@@ -23,7 +24,7 @@ class Memory(SystemSubSystem):
         self.add_detail(self.virt_short_repr())
         self.add_detail(self.swap_short_repr())
     
-    def display(self, epd):
+    def display(self, epd, drawer: ImageDraw = None, x: int = 0, y: int = 0) -> tuple[int, int]:
         pass
         
     def virt_short_repr(self):

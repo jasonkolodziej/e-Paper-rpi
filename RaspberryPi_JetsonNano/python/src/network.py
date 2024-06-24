@@ -115,7 +115,7 @@ class NetworkInterface(SystemSubSystem):
             "io_counters": self.io_counters._asdict() if self.io_counters else None
         }
     
-    def display(self, epd, drawer: ImageDraw, x: int = 0, y: int = 0) -> tuple[int, int] | None:
+    def display(self, epd, drawer: ImageDraw, x: int = 0, y: int = 0) -> tuple[int, int]:
         # self.drawer(epd)
         main_line = format("(%s)" % self.up())
         mFont = Font(self.header.font.size, True)
@@ -152,7 +152,7 @@ class Network(SystemSubSystem):
     def __repr__(self):
         return u'<{}>\n{}'.format(self.__name__, self.network_ifaces)
     
-    def display(self, epd, drawer: ImageDraw = None, x: int = 0, y: int = 0) -> tuple[int, int] | None:
+    def display(self, epd, drawer: ImageDraw = None, x: int = 0, y: int = 0) -> tuple[int, int]:
         self.drawer(epd)
         for n in self.network_ifaces:
             logging.debug("displaying network %s", n.header.text)

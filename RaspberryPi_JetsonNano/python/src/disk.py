@@ -3,7 +3,7 @@
 import psutil
 from psutil._common import bytes2human, sdiskpart, sdiskusage
 from .utils import Detail, SystemSubSystem
-
+from PIL import ImageDraw
 
 class Disk(SystemSubSystem):
     __name__ = "Disk"
@@ -47,7 +47,7 @@ class Disk(SystemSubSystem):
             "used_percentage": self.disk_usage.percent
         }
     
-    def display(self, epd):
+    def display(self, epd, drawer: ImageDraw = None, x: int = 0, y: int = 0) -> tuple[int, int]:
         pass
     
     # def display(self, epd):

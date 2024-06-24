@@ -8,7 +8,7 @@ from PIL import ImageFont, ImageDraw, Image
 # abstract base class work
 from abc import ABC, abstractmethod
 
-picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
+picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pics')
 fontdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'font')
 libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
 
@@ -32,11 +32,7 @@ class Detail:
     def __repr__(self):
         return self.text
 
-
-def vertical(epd) -> tuple[int, int]:
-    return (epd.width, epd.height)
-
-def horizontal(epd) -> tuple[int, int]:
+def horizontal(epd) -> tuple[int,int]:
     return (epd.height, epd.width)
 
 class SystemSubSystem(ABC):
@@ -55,7 +51,7 @@ class SystemSubSystem(ABC):
         pass
     
     @abstractmethod
-    def display(self, epd, drawer: ImageDraw, x: int = 0, y: int = 0) -> tuple[int, int] | None:
+    def display(self, epd, drawer: ImageDraw, x: int = 0, y: int = 0) -> tuple[int, int]:
         pass
     
     def drawer(self, epd, vertical:bool = False) -> ImageDraw:
